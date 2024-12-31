@@ -1,4 +1,3 @@
-package assignments.ex2;
 import java.io.IOException;
 // Add your documentation below:
 
@@ -11,7 +10,7 @@ public class Ex2Sheet implements Sheet {
         table = new SCell[x][y];
         for(int i=0;i<x;i=i+1) {
             for(int j=0;j<y;j=j+1) {
-                table[i][j] = new SCell("");
+                table[i][j] = new SCell("",this);
             }
         }
         eval();
@@ -56,7 +55,7 @@ public class Ex2Sheet implements Sheet {
     }
     @Override
     public void set(int x, int y, String s) {
-        Cell c = new SCell(s);
+        Cell c = new SCell(s,this);
         table[x][y] = c;
         // Add your code here
 

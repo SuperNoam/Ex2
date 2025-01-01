@@ -66,59 +66,11 @@ public void setData(String s) {
     }
 
     @Override
-    public int getOrder() throws ErrorCycle {
+    public int getOrder() {
         // Add your code here
-        if(this.type == Ex2Utils.TEXT || this.type == Ex2Utils.NUMBER) {
-            return 0;
-        }
-        try{
-            ArrayList<String> arr = new ArrayList<String>();
-            arr.add(this.entry.toString());
-            return computeDepth(this.line, new ArrayList<String>());
-        }catch (ErrorCycle | ErrorForm e) {
-            return -1;
-        }
+
+        return 0;
         // ///////////////////
-    }
-
-    public int computeDepth(String line, ArrayList<String> visited) throws ErrorCycle, ErrorForm {
-        // Check if the current line is already visited to detect cycles
-        if (visited.contains(line)) {
-            throw new ErrorCycle();
-        }
-
-        // Add the current line to visited to track it
-        visited.add(line);
-
-        int maxDepth = 0;
-
-        // Iterate over the characters in the line to identify cell references
-        for (int i = 0; i < line.length(); i++) {
-            // Check for letter characters (cell references)
-            if (isLetter(line.charAt(i))) {
-                // Find the end of the current cell reference
-                String sub = line.substring(i, closestOpOrBrackets(line, i));
-
-                // If the substring has been already visited, a cycle exists
-                if (visited.contains(sub)) {
-                    throw new ErrorCycle();
-                }
-
-                // Find the cell that the reference refers to
-                Cell dependentCell = this.sheet.get(sub);
-                if (dependentCell != null) {
-                    // If the cell exists, compute its depth recursively
-                    int dependencyDepth = computeDepth(dependentCell.getData(), visited);
-                    maxDepth = Math.max(maxDepth, dependencyDepth + 1);
-                } else {
-                    // If the cell doesn't exist, throw an ErrorForm exception
-                    throw new ErrorForm();
-                }
-            }
-        }
-
-        // Return the maximum depth calculated from dependencies
-        return maxDepth;
     }
 
 
@@ -250,16 +202,6 @@ public void setData(String s) {
             return true;
         }catch (NumberFormatException _){
             return false;
-        }
-    }
-    public class ErrorCycle extends Exception {
-        public ErrorCycle() {
-            super("ErrorCycle");
-        }
-    }
-    public class ErrorForm extends Exception {
-        public ErrorForm() {
-            super("ErrorForm");
         }
     }
 }

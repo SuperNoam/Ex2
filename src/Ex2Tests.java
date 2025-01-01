@@ -53,12 +53,6 @@ class Ex2Tests {
         mockSheet.set(0,1,"=A0+2");
         mockSheet.set(0,2,"=A1+A0");
         int depth = -2;
-        try {
-            depth = cell.computeDepth(cell.getData(), new ArrayList<>());
-        }
-        catch (Exception e) {
-            System.out.println(e.getMessage());
-        }
         assertEquals(2, depth, "Depth should correctly compute as 2 for valid dependencies.");
     }
 }

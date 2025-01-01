@@ -25,22 +25,8 @@ public class SCell implements Cell {
     }
 
     @Override
-public void setData(String s) {
-        if(s.isEmpty()){
-            return;
-        }
-        if(s.charAt(0) == '=') {
-            if (this.isForm(s)) {
-                //evel
-                this.type = Ex2Utils.FORM;
-            }else {
-                this.type=Ex2Utils.ERR_FORM_FORMAT;
-            }
-        } else if (isNumber(s)) {
-            this.type=Ex2Utils.NUMBER;
-        }else {
-            this.type=Ex2Utils.TEXT;
-        }
+    public void setData(String s) {
+        // Add your code here
         line = s;
         /////////////////////
     }
@@ -157,9 +143,80 @@ public void setData(String s) {
         return bracketsCount == 0;
     }
 
+    public double computeForm(String expression) {
+        if(expression.charAt(0) == '='){
+            expression = expression.substring(1);
+        }
+        if(expression.isEmpty()){
+            return 0;
+        }
+        if(noOps(expression)){
+            /*
+            if(isLetter(expression.charAt(0))){
+                if(expression.length() > 3){
+                    throw new NumberFormatException();
+                }else{
+                    return this.computeForm(this.sheet.get(this.sheet.(expression))[this.sheet.xCell(expression)].value);
+                }
+            }
+             */
+            expression = expression.replace("(","");
+            expression = expression.replace(")","");
+            return Double.parseDouble(expression);
+        }
+        while (expression.contains("(")){
+            int indexOfClosed = correctClosedBracket(expression,expression.indexOf('('));
+            String subStrAfterClose = expression.substring(indexOfClosed+1);
+            expression = expression.substring(0, expression.indexOf("(")) +
+                    String.valueOf(computeForm(expression.substring(expression.indexOf("(")+1, indexOfClosed)))
+                    + subStrAfterClose;
+        }
+        int additionIndex = expression.indexOf("+");
+        if(additionIndex != -1){
+            return computeForm(expression.substring(0, additionIndex)) + computeForm(expression.substring(additionIndex +1));
+        }
+        int subIndex = expression.indexOf("-");
+        if(subIndex != -1) {
+            if(subIndex == 0 && !isOp(expression.charAt(subIndex+1))){
+                return computeForm("") - computeForm(expression.substring(subIndex +1));
+            }
+            else if (!isOp(expression.charAt(subIndex - 1))) {
+                return computeForm(expression.substring(0, subIndex)) - computeForm(expression.substring(subIndex + 1));
+            }
+        }
+        int multiIndex = expression.indexOf("*");
+        if(multiIndex != -1){
+            return computeForm(expression.substring(0, multiIndex)) * computeForm(expression.substring(multiIndex+1));
+        }
+        int divisionIndex = expression.indexOf("/");
+        if(divisionIndex != -1){
+            return computeForm(expression.substring(0, divisionIndex)) / computeForm(expression.substring(divisionIndex+1));
+        }
+        return -1;
+
+    }
+
     public static boolean isOp(char c) {
         String ops = "+-/*";
         return ops.contains(String.valueOf(c));
+    }
+    public static boolean noOps(String str) {
+        for (int i = 0; i < str.length(); i++) {
+            if (isOp(str.charAt(i))) {
+                if (str.charAt(i) != '-') {
+                    return false;
+                }
+            }
+        }
+        if(str.indexOf("-") != str.lastIndexOf("-")){
+            return false;
+        }
+        if(str.contains("-")){
+            if(str.indexOf("-") != 0){
+                return false;
+            }
+        }
+        return true;
     }
     public static int correctClosedBracket(String str,int index){
         int count = 0;
@@ -196,7 +253,7 @@ public void setData(String s) {
         }
         return i;
     }
-    public static boolean isNumber(String s){
+    public boolean isNumber(String s){
         try {
             Double.parseDouble(s);
             return true;

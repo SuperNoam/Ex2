@@ -66,6 +66,33 @@ public class Ex2Sheet implements Sheet {
         int[][] dd = depth();
         // Add your code here
 
+
+        for (int i = 0; i < this.height(); i++) {
+            for (int j = 0; j < this.width(); j++) {
+                SCell cell = (SCell)this.get(j,i);
+                if(cell != null) {
+                    String str = cell.getData();
+                    if (!str.isEmpty()) {
+                        if (str.charAt(0) == '=') {
+                            if (cell.isForm(str)) {
+                                String form = eval(j, i);
+                                this.set(j, i, form);
+                                this.get(j, i).setType(Ex2Utils.FORM);
+                            } else {
+                                this.set(j, i, Ex2Utils.ERR_FORM);
+                                this.get(j, i).setType(Ex2Utils.ERR_FORM_FORMAT);
+                            }
+                        } else if (cell.isNumber(str)) {
+                            this.set(j, i, Double.parseDouble(str) + "");
+                            this.get(j, i).setType(Ex2Utils.NUMBER);
+                        } else {
+                            this.set(j, i, str);
+                            this.get(j, i).setType(Ex2Utils.TEXT);
+                        }
+                    }
+                }
+            }
+        }
         // ///////////////////
     }
 
@@ -104,7 +131,11 @@ public class Ex2Sheet implements Sheet {
     @Override
     public String eval(int x, int y) {
         String ans = null;
-        if(get(x,y)!=null) {ans = get(x,y).toString();}
+        SCell cell = (SCell)this.get(x,y);
+        if(cell != null) {
+            ans = cell.toString();
+        }
+        ans = String.valueOf(cell.computeForm(ans));
         // Add your code here
 
         /////////////////////

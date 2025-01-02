@@ -6,7 +6,12 @@ public class CellEntry  implements Index2D {
     public CellEntry(String index) {
         this.index = index;
     }
-
+    public String getIndex() {
+        return index;
+    }
+    public void setIndex(String index) {
+        this.index = index;
+    }
     @Override
     public boolean isValid() {
         if(this.index == null|| this.index.isEmpty()) {

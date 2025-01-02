@@ -4,11 +4,11 @@ import java.util.ArrayList;
 
 public class SCell implements Cell {
     private String line;
+    private String value = "";
     private int type;
     //1 - Text, 2 - Number, 3 - Form, -2 - Err form, -1 - Err cycle\Err
     private Ex2Sheet sheet;
     private CellEntry entry;
-    // Add your code here
 
     public SCell(String s, Ex2Sheet sheet) {
         // Add your code here
@@ -16,12 +16,26 @@ public class SCell implements Cell {
         setData(s);
     }
 
+    public void setValue(String v){
+        this.value = v;
+    }
+
+    public String getValue(){
+        return this.value;
+    }
+
+    public void setEntry(CellEntry e){
+        this.entry = e;
+    }
+    public CellEntry getEntry(){
+        return this.entry;
+    }
 
 
     //@Override
     @Override
     public String toString() {
-        return getData();
+        return this.line;
     }
 
     @Override
@@ -144,22 +158,38 @@ public class SCell implements Cell {
     }
 
     public double computeForm(String expression) {
-        if(expression.charAt(0) == '='){
-            expression = expression.substring(1);
-        }
+        expression=expression.replaceAll(" ","");
+        expression=expression.toUpperCase();
         if(expression.isEmpty()){
             return 0;
         }
+        if(expression.charAt(0) == '='){
+            expression = expression.substring(1);
+        }
+        System.out.println(expression);
         if(noOps(expression)){
-            /*
+
+            boolean mins = false;
+            if(expression.charAt(0) == '-'){
+                mins = true;
+                expression = expression.substring(1);
+            }
             if(isLetter(expression.charAt(0))){
-                if(expression.length() > 3){
-                    throw new NumberFormatException();
+                SCell cell = (SCell)this.sheet.get(expression);
+                if(cell == null){
+                    //throw exception
                 }else{
-                    return this.computeForm(this.sheet.get(this.sheet.(expression))[this.sheet.xCell(expression)].value);
+                    if(cell.getType() == Ex2Utils.TEXT || cell.getType() == Ex2Utils.ERR){
+                        //throw exception
+                    } else if (cell.getType() == Ex2Utils.NUMBER || cell.getType() == Ex2Utils.FORM) {
+                        if(mins) {
+                            return -this.computeForm(cell.getData());
+                        }else{
+                            return this.computeForm(cell.getData());
+                        }
+                    }
                 }
             }
-             */
             expression = expression.replace("(","");
             expression = expression.replace(")","");
             return Double.parseDouble(expression);
@@ -260,5 +290,11 @@ public class SCell implements Cell {
         }catch (NumberFormatException _){
             return false;
         }
+    }
+    public static int isMinus(boolean isMins){
+        if(isMins){
+            return -1;
+        }
+        return 1;
     }
 }

@@ -11,6 +11,7 @@ public class Ex2Sheet implements Sheet {
         for(int i=0;i<x;i=i+1) {
             for(int j=0;j<y;j=j+1) {
                 table[i][j] = new SCell("",this);
+                ((SCell)table[i][j]).setEntry(new CellEntry(Ex2Utils.ABC[i]+""+j));
             }
         }
         eval();
@@ -22,12 +23,22 @@ public class Ex2Sheet implements Sheet {
     @Override
     public String value(int x, int y) {
         String ans = Ex2Utils.EMPTY_CELL;
-        // Add your code here
-
-        Cell c = get(x,y);
-        if(c!=null) {ans = c.toString();}
-
-        /////////////////////
+        SCell c = (SCell)get(x,y);
+        if(c!=null) {
+            if(c.getType() == Ex2Utils.ERR_FORM_FORMAT){
+                return Ex2Utils.ERR_FORM;
+            } else if (c.getType() == Ex2Utils.ERR_CYCLE_FORM) {
+                return Ex2Utils.ERR_CYCLE;
+            }
+            ans = c.toString();
+            if(c.getType() == Ex2Utils.FORM){
+                ans = String.valueOf(c.computeForm(ans));
+            }else if(c.getType() == Ex2Utils.NUMBER){
+                ans = Double.parseDouble(ans) + "";
+            } else if (c.getType() == Ex2Utils.TEXT) {
+                ans = ans;
+            }
+        }
         return ans;
     }
 
@@ -39,9 +50,12 @@ public class Ex2Sheet implements Sheet {
     @Override
     public Cell get(String cords) {
         Cell ans = null;
-        // Add your code here
-
-        /////////////////////
+        CellEntry ce = new CellEntry(cords);
+        if(ce.isValid()){
+            int x = ce.getX();
+            int y = ce.getY();
+            ans = get(x,y);
+        }
         return ans;
     }
 
@@ -55,11 +69,9 @@ public class Ex2Sheet implements Sheet {
     }
     @Override
     public void set(int x, int y, String s) {
-        Cell c = new SCell(s,this);
+        SCell c = new SCell(s,this);
+        c.setEntry(new CellEntry(Ex2Utils.ABC[x]+""+y));
         table[x][y] = c;
-        // Add your code here
-
-        /////////////////////
     }
     @Override
     public void eval() {
@@ -76,17 +88,17 @@ public class Ex2Sheet implements Sheet {
                         if (str.charAt(0) == '=') {
                             if (cell.isForm(str)) {
                                 String form = eval(j, i);
-                                this.set(j, i, form);
+                                ((SCell) this.get(j,i)).setValue(form);
                                 this.get(j, i).setType(Ex2Utils.FORM);
                             } else {
-                                this.set(j, i, Ex2Utils.ERR_FORM);
+                                ((SCell) this.get(j,i)).setValue(Ex2Utils.ERR_FORM);
                                 this.get(j, i).setType(Ex2Utils.ERR_FORM_FORMAT);
                             }
                         } else if (cell.isNumber(str)) {
-                            this.set(j, i, Double.parseDouble(str) + "");
+                            ((SCell) this.get(j,i)).setValue(Double.parseDouble(str)+"");
                             this.get(j, i).setType(Ex2Utils.NUMBER);
                         } else {
-                            this.set(j, i, str);
+                            ((SCell) this.get(j,i)).setValue(str);
                             this.get(j, i).setType(Ex2Utils.TEXT);
                         }
                     }
@@ -95,7 +107,6 @@ public class Ex2Sheet implements Sheet {
         }
         // ///////////////////
     }
-
     @Override
     public boolean isIn(int xx, int yy) {
         boolean ans = xx>=0 && yy>=0;
@@ -134,11 +145,10 @@ public class Ex2Sheet implements Sheet {
         SCell cell = (SCell)this.get(x,y);
         if(cell != null) {
             ans = cell.toString();
+            ans = String.valueOf(cell.computeForm(ans));
+            cell.setValue(ans);
         }
-        ans = String.valueOf(cell.computeForm(ans));
-        // Add your code here
 
-        /////////////////////
         return ans;
         }
 }

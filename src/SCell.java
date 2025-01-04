@@ -1,6 +1,8 @@
 // Add your documentation below:
 
 import java.util.ArrayList;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class SCell implements Cell {
     private String line;
@@ -9,6 +11,7 @@ public class SCell implements Cell {
     //1 - Text, 2 - Number, 3 - Form, -2 - Err form, -1 - Err cycle\Err
     private Ex2Sheet sheet;
     private CellEntry entry;
+    private int order;
 
     public SCell(String s, Ex2Sheet sheet) {
         // Add your code here
@@ -61,17 +64,50 @@ public class SCell implements Cell {
 
     @Override
     public void setOrder(int t) {
-        // Add your code here
+        this.order = t;
 
     }
 
     @Override
     public int getOrder() {
-        // Add your code here
-
-        return 0;
-        // ///////////////////
+        return this.order;
     }
+
+    public int calcOrder(){
+        int thisType = this.getType();
+        if(thisType == Ex2Utils.NUMBER || thisType == Ex2Utils.TEXT){
+            return 0;
+        }
+        else if(thisType == Ex2Utils.ERR_FORM_FORMAT){
+            return -2;
+        } else if (thisType == Ex2Utils.ERR_CYCLE_FORM) {
+            return -1;
+        }
+        String str = this.getData();
+        ArrayList<SCell> arr = getReferences(str);
+        ArrayList<Integer> depends = new ArrayList<Integer>();
+        for (int i = 0; i < arr.size(); i++) {
+            int depend = arr.get(i).calcOrder();
+            if(depend == -1){
+                return -1;
+            } else if (depend == -2) {
+                return -2;
+            }else {
+                depends.add(depend);
+            }
+        }
+        if(depends.isEmpty()){
+            return 0;
+        }
+        int max = depends.get(0);
+        for (int i = 0; i < arr.size(); i++) {
+            if(depends.get(i) > max){
+                max = depends.get(i);
+            }
+        }
+        return max;
+    }
+
 
 
 
@@ -157,7 +193,7 @@ public class SCell implements Cell {
         return bracketsCount == 0;
     }
 
-    public double computeForm(String expression) {
+    public double computeForm(String expression) throws ErrorForm, ErrorCycle {
         expression=expression.replaceAll(" ","");
         expression=expression.toUpperCase();
         if(expression.isEmpty()){
@@ -166,7 +202,6 @@ public class SCell implements Cell {
         if(expression.charAt(0) == '='){
             expression = expression.substring(1);
         }
-        System.out.println(expression);
         if(noOps(expression)){
 
             boolean mins = false;
@@ -176,11 +211,14 @@ public class SCell implements Cell {
             }
             if(isLetter(expression.charAt(0))){
                 SCell cell = (SCell)this.sheet.get(expression);
-                if(cell == null){
+                if(cell == null || cell.getData().isEmpty() || cell.getType() == Ex2Utils.TEXT){
                     //throw exception
+                    throw new ErrorForm("NoCellFound");
                 }else{
-                    if(cell.getType() == Ex2Utils.TEXT || cell.getType() == Ex2Utils.ERR){
+                    System.out.println("type: "+cell.getType());
+                    if(cell.getType() == Ex2Utils.ERR_CYCLE_FORM){
                         //throw exception
+                        throw new ErrorCycle("ErrorCycle");
                     } else if (cell.getType() == Ex2Utils.NUMBER || cell.getType() == Ex2Utils.FORM) {
                         if(mins) {
                             return -this.computeForm(cell.getData());
@@ -190,6 +228,7 @@ public class SCell implements Cell {
                     }
                 }
             }
+            //else ??
             expression = expression.replace("(","");
             expression = expression.replace(")","");
             return Double.parseDouble(expression);
@@ -296,5 +335,57 @@ public class SCell implements Cell {
             return -1;
         }
         return 1;
+    }
+
+    public boolean hasRef(){
+        String str = this.getData();
+        for (int i = 0; i < str.length(); i++) {
+            if(isLetter(str.charAt(i))){
+                CellEntry entry = new CellEntry(str.substring(i,closestOpOrBrackets(str,i)));
+                if(entry.isValid()){
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    public ArrayList<SCell> getReferences(String str) {
+        str = str.replaceAll(" ","");
+        ArrayList<SCell> references = new ArrayList<SCell>();
+        str = str.toUpperCase();
+        for (int i = 0; i < str.length(); i++) {
+            if(isLetter(str.charAt(i))){
+                CellEntry entry = new CellEntry(str.substring(i,closestOpOrBrackets(str,i)));
+                references.add((SCell)this.sheet.get((entry.getIndex())));
+            }
+        }
+        return references;
+    }
+
+    public boolean containHimself() {
+        String str = this.getData();
+        str = str.toUpperCase();
+        for (int i = 0; i < str.length(); i++) {
+            if(isLetter(str.charAt(i))){
+                CellEntry en = new CellEntry(str.substring(i,closestOpOrBrackets(str,i)));
+                if(en.getIndex().equals(this.entry.getIndex())){
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+
+    public class ErrorForm extends Exception {
+        public ErrorForm(String errorMessage) {
+            super(errorMessage);
+        }
+    }
+    public class ErrorCycle extends Exception {
+        public ErrorCycle(String errorMessage) {
+            super(errorMessage);
+        }
     }
 }

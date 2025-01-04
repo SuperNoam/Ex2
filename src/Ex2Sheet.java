@@ -1,4 +1,6 @@
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Set;
 // Add your documentation below:
 
 public class Ex2Sheet implements Sheet {
@@ -11,6 +13,7 @@ public class Ex2Sheet implements Sheet {
         for(int i=0;i<x;i=i+1) {
             for(int j=0;j<y;j=j+1) {
                 table[i][j] = new SCell("",this);
+                table[i][j].setType(1);
                 ((SCell)table[i][j]).setEntry(new CellEntry(Ex2Utils.ABC[i]+""+j));
             }
         }
@@ -32,7 +35,13 @@ public class Ex2Sheet implements Sheet {
             }
             ans = c.toString();
             if(c.getType() == Ex2Utils.FORM){
-                ans = String.valueOf(c.computeForm(ans));
+                try {
+                    ans = String.valueOf(c.computeForm(ans));
+                }catch (SCell.ErrorForm e) {
+                    ans = Ex2Utils.ERR_FORM;
+                }catch (SCell.ErrorCycle e) {
+                    ans = Ex2Utils.ERR_CYCLE;
+                }
             }else if(c.getType() == Ex2Utils.NUMBER){
                 ans = Double.parseDouble(ans) + "";
             } else if (c.getType() == Ex2Utils.TEXT) {
@@ -84,6 +93,11 @@ public class Ex2Sheet implements Sheet {
                 SCell cell = (SCell)this.get(j,i);
                 if(cell != null) {
                     String str = cell.getData();
+                    System.out.println(dd[j][i]);
+                    if(dd[j][i] == -1){
+                        cell.setType(Ex2Utils.ERR_CYCLE_FORM);
+                        continue;
+                    }
                     if (!str.isEmpty()) {
                         if (str.charAt(0) == '=') {
                             if (cell.isForm(str)) {
@@ -119,9 +133,18 @@ public class Ex2Sheet implements Sheet {
     @Override
     public int[][] depth() {
         int[][] ans = new int[width()][height()];
-        // Add your code here
-
-        // ///////////////////
+        for (int i = 0; i < this.height(); i++) {
+            for (int j = 0; j < this.width(); j++) {
+                SCell cell = (SCell)this.get(j,i);
+                if(cell != null) {
+                    if(cell.containHimself()){
+                        ans[j][i] = -1;
+                    }else {
+                        ans[j][i] = cell.getOrder();
+                    }
+                }
+            }
+        }
         return ans;
     }
 
@@ -145,7 +168,13 @@ public class Ex2Sheet implements Sheet {
         SCell cell = (SCell)this.get(x,y);
         if(cell != null) {
             ans = cell.toString();
-            ans = String.valueOf(cell.computeForm(ans));
+            try {
+                ans = String.valueOf(cell.computeForm(ans));
+            }catch (SCell.ErrorForm e) {
+                ans = Ex2Utils.ERR_FORM;
+            }catch (SCell.ErrorCycle e) {
+                ans = Ex2Utils.ERR_CYCLE;
+            }
             cell.setValue(ans);
         }
 

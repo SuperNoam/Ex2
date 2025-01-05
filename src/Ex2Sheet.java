@@ -1,19 +1,19 @@
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Set;
-// Add your documentation below:
+import java.util.Arrays;
+import java.util.Scanner;
 
 public class Ex2Sheet implements Sheet {
     private Cell[][] table;
-    // Add your code here
-
-    // ///////////////////
     public Ex2Sheet(int x, int y) {
         table = new SCell[x][y];
         for(int i=0;i<x;i=i+1) {
             for(int j=0;j<y;j=j+1) {
                 table[i][j] = new SCell("",this);
-                table[i][j].setType(1);
+                table[i][j].setType(Ex2Utils.TEXT);
                 ((SCell)table[i][j]).setEntry(new CellEntry(Ex2Utils.ABC[i]+""+j));
             }
         }
@@ -45,7 +45,7 @@ public class Ex2Sheet implements Sheet {
             }else if(c.getType() == Ex2Utils.NUMBER){
                 ans = Double.parseDouble(ans) + "";
             } else if (c.getType() == Ex2Utils.TEXT) {
-                ans = ans;
+                ans = ans;// :)
             }
         }
         return ans;
@@ -84,79 +84,165 @@ public class Ex2Sheet implements Sheet {
     }
     @Override
     public void eval() {
+        // Reset all cells first
+        for (int i = 0; i < width(); i++) {
+            for (int j = 0; j < height(); j++) {
+                if (table[i][j] != null) {
+                    ((SCell)table[i][j]).resetVisited();
+                }
+            }
+        }
         int[][] dd = depth();
-        // Add your code here
+        System.out.println(Arrays.deepToString(dd));
+        for (int depth = 0; depth <= getMaxDepth(dd); depth++) {
+            for (int i = 0; i < width(); i++) {
 
-
-        for (int i = 0; i < this.height(); i++) {
-            for (int j = 0; j < this.width(); j++) {
-                SCell cell = (SCell)this.get(j,i);
-                if(cell != null) {
-                    String str = cell.getData();
-                    System.out.println(dd[j][i]);
-                    if(dd[j][i] == -1){
+                for (int j = 0; j < height(); j++) {
+                    if(dd[i][j] == -1){
+                        SCell cell = (SCell)get(i,j);
                         cell.setType(Ex2Utils.ERR_CYCLE_FORM);
-                        continue;
+                        cell.setValue(Ex2Utils.ERR_CYCLE);
                     }
-                    if (!str.isEmpty()) {
-                        if (str.charAt(0) == '=') {
-                            if (cell.isForm(str)) {
-                                String form = eval(j, i);
-                                ((SCell) this.get(j,i)).setValue(form);
-                                this.get(j, i).setType(Ex2Utils.FORM);
-                            } else {
-                                ((SCell) this.get(j,i)).setValue(Ex2Utils.ERR_FORM);
-                                this.get(j, i).setType(Ex2Utils.ERR_FORM_FORMAT);
-                            }
-                        } else if (cell.isNumber(str)) {
-                            ((SCell) this.get(j,i)).setValue(Double.parseDouble(str)+"");
-                            this.get(j, i).setType(Ex2Utils.NUMBER);
-                        } else {
-                            ((SCell) this.get(j,i)).setValue(str);
-                            this.get(j, i).setType(Ex2Utils.TEXT);
-                        }
+                    else if (dd[i][j] == depth) {
+                        evaluateCell(i, j);
                     }
                 }
             }
         }
-        // ///////////////////
     }
+    private int getMaxDepth(int[][] depths) {
+        int max = 0;
+        for (int i = 0; i < width(); i++) {
+            for (int j = 0; j < height(); j++) {
+                if (depths[i][j] > max) {
+                    max = depths[i][j];
+                }
+            }
+        }
+        return max;
+    }
+
+    private void evaluateCell(int x, int y) {
+        SCell cell = (SCell)get(x, y);
+        if (cell == null) return;
+
+        String str = cell.getData();
+        if (str.isEmpty()) {
+            cell.setType(Ex2Utils.TEXT);
+            return;
+        }
+
+        if (str.charAt(0) == '=') {
+            if (cell.isForm(str)) {
+                ArrayList<String> cyclePath = new ArrayList<>();
+                if (cell.detectCycle(cyclePath)) {
+                    cell.setType(Ex2Utils.ERR_CYCLE_FORM);
+                    cell.setValue(Ex2Utils.ERR_CYCLE);
+                } else {
+                    try {
+                        String result = eval(x, y);
+                        cell.setValue(result);
+                        cell.setType(Ex2Utils.FORM);
+                    } catch (Exception e) {
+                        cell.setType(Ex2Utils.ERR_FORM_FORMAT);
+                        cell.setValue(Ex2Utils.ERR_FORM);
+                    }
+                }
+            } else {
+                cell.setType(Ex2Utils.ERR_FORM_FORMAT);
+                cell.setValue(Ex2Utils.ERR_FORM);
+            }
+        } else if (cell.isNumber(str)) {
+            cell.setValue(Double.parseDouble(str) + "");
+            cell.setType(Ex2Utils.NUMBER);
+        } else {
+            cell.setValue(str);
+            cell.setType(Ex2Utils.TEXT);
+        }
+    }
+
     @Override
     public boolean isIn(int xx, int yy) {
         boolean ans = xx>=0 && yy>=0;
-        // Add your code here
-
-        /////////////////////
+        if(xx > this.width() || yy > this.height()){
+            ans = false;
+        }
         return ans;
     }
 
     @Override
     public int[][] depth() {
         int[][] ans = new int[width()][height()];
-        for (int i = 0; i < this.height(); i++) {
-            for (int j = 0; j < this.width(); j++) {
-                SCell cell = (SCell)this.get(j,i);
-                if(cell != null) {
-                    if(cell.containHimself()){
-                        ans[j][i] = -1;
-                    }else {
-                        ans[j][i] = cell.getOrder();
-                    }
+        for (int i = 0; i < width(); i++) {
+            for (int j = 0; j < height(); j++) {
+                SCell cell = (SCell)get(i, j);
+                if (cell != null) {
+                    cell.resetVisited();
+                    ans[i][j] = cell.calcOrder();
                 }
             }
         }
+
         return ans;
     }
 
     @Override
     public void load(String fileName) throws IOException {
-        // Add your code here
+        try {
+            File file = new File(fileName);
+            Scanner myReader = new Scanner(file);
+            if(!myReader.hasNext()){
+                return;
+            }
+            String line = myReader.nextLine();
+            while (myReader.hasNextLine() && line != null) {
+                line = myReader.nextLine();
+                System.out.println(line);
+                line = line.replaceAll(" ","");
+                String[] arr = line.split(",");
+                System.out.println("Arr: " + Arrays.toString(arr));
+                if (arr.length < 3) {
+                    System.out.println("got out 1");
+                    continue;
+                }
+                try {
+                    int x = Integer.parseInt(arr[0]);
+                    int y = Integer.parseInt(arr[1]);
+                    //CellEntry entry = new CellEntry(Ex2Utils.ABC[x] + y);
+                    this.set(x, y, arr[2]);
+                } catch (Exception e) {
+                    System.out.println(e.getMessage());
+                    System.out.println("got out 2");
+                    continue;
+                }
 
-        /////////////////////
+            }
+        } catch (IOException e) {
+            throw new IOException(e.getMessage());
+        }
+        eval();
     }
+
 
     @Override
     public void save(String fileName) throws IOException {
+        try {
+            File newFile = new File(fileName);
+            FileWriter myWriter = new FileWriter(newFile);
+            myWriter.write("FirstLine\n");
+            for (int i = 0; i < width(); i++) {
+                for (int j = 0; j < height(); j++) {
+                    SCell cell = (SCell) get(i, j);
+                    if (cell != null && !cell.getData().isEmpty()) {
+                        myWriter.write(i + "," + j + "," + cell.getData() + "\n");
+                    }
+                }
+            }
+            myWriter.close();
+        }catch (Exception e){
+            throw new IOException(e.getMessage());
+        }
+
         // Add your code here
 
         /////////////////////
@@ -165,19 +251,18 @@ public class Ex2Sheet implements Sheet {
     @Override
     public String eval(int x, int y) {
         String ans = null;
-        SCell cell = (SCell)this.get(x,y);
-        if(cell != null) {
+        SCell cell = (SCell)get(x, y);
+        if (cell != null) {
             ans = cell.toString();
             try {
                 ans = String.valueOf(cell.computeForm(ans));
-            }catch (SCell.ErrorForm e) {
+            } catch (SCell.ErrorForm e) {
                 ans = Ex2Utils.ERR_FORM;
-            }catch (SCell.ErrorCycle e) {
+            } catch (SCell.ErrorCycle e) {
                 ans = Ex2Utils.ERR_CYCLE;
             }
             cell.setValue(ans);
         }
-
         return ans;
-        }
+    }
 }

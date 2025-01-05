@@ -12,6 +12,9 @@ public class SCell implements Cell {
     private Ex2Sheet sheet;
     private CellEntry entry;
     private int order;
+    private boolean isVisited = false;
+    private boolean isCalculating = false;
+    private int calculatedOrder = -2;
 
     public SCell(String s, Ex2Sheet sheet) {
         // Add your code here
@@ -22,19 +25,9 @@ public class SCell implements Cell {
     public void setValue(String v){
         this.value = v;
     }
-
-    public String getValue(){
-        return this.value;
-    }
-
     public void setEntry(CellEntry e){
         this.entry = e;
     }
-    public CellEntry getEntry(){
-        return this.entry;
-    }
-
-
     //@Override
     @Override
     public String toString() {
@@ -43,9 +36,7 @@ public class SCell implements Cell {
 
     @Override
     public void setData(String s) {
-        // Add your code here
         line = s;
-        /////////////////////
     }
     @Override
     public String getData() {
@@ -65,49 +56,108 @@ public class SCell implements Cell {
     @Override
     public void setOrder(int t) {
         this.order = t;
-
     }
 
     @Override
     public int getOrder() {
         return this.order;
     }
+    public void resetVisited() {
+        isVisited = false;
+        isCalculating = false;
+        calculatedOrder = -2;
+    }
+    public boolean detectCycle(ArrayList<String> path) {
+        if (isCalculating) {
+            return true;
+        }
+        if (isVisited) {
+            return false;
+        }
 
-    public int calcOrder(){
-        int thisType = this.getType();
-        if(thisType == Ex2Utils.NUMBER || thisType == Ex2Utils.TEXT){
-            return 0;
+        isCalculating = true;
+        if (entry != null) {
+            path.add(this.entry.getIndex());
         }
-        else if(thisType == Ex2Utils.ERR_FORM_FORMAT){
-            return -2;
-        } else if (thisType == Ex2Utils.ERR_CYCLE_FORM) {
-            return -1;
-        }
-        String str = this.getData();
-        ArrayList<SCell> arr = getReferences(str);
-        ArrayList<Integer> depends = new ArrayList<Integer>();
-        for (int i = 0; i < arr.size(); i++) {
-            int depend = arr.get(i).calcOrder();
-            if(depend == -1){
-                return -1;
-            } else if (depend == -2) {
-                return -2;
-            }else {
-                depends.add(depend);
+
+        ArrayList<SCell> refs = getReferences(this.getData());
+        for (SCell ref : refs) {
+            if (ref != null && ref.detectCycle(path)) {
+                return true;
             }
         }
-        if(depends.isEmpty()){
-            return 0;
+
+        if (entry != null) {
+            path.remove(this.entry.getIndex());
         }
-        int max = depends.get(0);
-        for (int i = 0; i < arr.size(); i++) {
-            if(depends.get(i) > max){
-                max = depends.get(i);
-            }
-        }
-        return max;
+        isCalculating = false;
+        isVisited = true;
+        return false;
     }
 
+    public int calcOrder() {
+        if (calculatedOrder != -2) {
+            return calculatedOrder;
+        }
+
+        if (isCalculating) {
+            return -1;
+        }
+
+        String str = this.getData();
+        if (str == null || str.isEmpty() || type == Ex2Utils.TEXT || type == Ex2Utils.NUMBER) {
+            calculatedOrder = 0;
+            return 0;
+        }
+        if (type == Ex2Utils.ERR_FORM_FORMAT) {
+            calculatedOrder = -2;
+            return -2;
+        }
+        if (type == Ex2Utils.ERR_CYCLE_FORM) {
+            calculatedOrder = -1;
+            return -1;
+        }
+
+        isCalculating = true;
+        ArrayList<SCell> refs = getReferences(str);
+        ArrayList<Integer> depends = new ArrayList<>();
+
+        for (SCell ref : refs) {
+            if (ref == null) {
+                calculatedOrder = -2;
+                isCalculating = false;
+                return -2;
+            }
+            int depend = ref.calcOrder();
+            if (depend == -1) {
+                calculatedOrder = -1;
+                isCalculating = false;
+                return -1;
+            }
+            if (depend == -2) {
+                calculatedOrder = -2;
+                isCalculating = false;
+                return -2;
+            }
+            depends.add(depend);
+        }
+
+        isCalculating = false;
+
+        if (depends.isEmpty()) {
+            calculatedOrder = 0;
+            return 0;
+        }
+
+        int max = 0;
+        for (Integer depend : depends) {
+            if (depend > max) {
+                max = depend;
+            }
+        }
+        calculatedOrder = max + 1;
+        return max + 1;
+    }
 
 
 
@@ -194,75 +244,106 @@ public class SCell implements Cell {
     }
 
     public double computeForm(String expression) throws ErrorForm, ErrorCycle {
-        expression=expression.replaceAll(" ","");
-        expression=expression.toUpperCase();
-        if(expression.isEmpty()){
+        expression = expression.replaceAll(" ", "").toUpperCase();
+        if (expression.isEmpty()) {
             return 0;
         }
-        if(expression.charAt(0) == '='){
+        if (expression.charAt(0) == '=') {
             expression = expression.substring(1);
         }
-        if(noOps(expression)){
-
+        if (noOps(expression)) {
             boolean mins = false;
-            if(expression.charAt(0) == '-'){
+            if (expression.charAt(0) == '-') {
                 mins = true;
                 expression = expression.substring(1);
             }
-            if(isLetter(expression.charAt(0))){
-                SCell cell = (SCell)this.sheet.get(expression);
-                if(cell == null || cell.getData().isEmpty() || cell.getType() == Ex2Utils.TEXT){
-                    //throw exception
+            if (isLetter(expression.charAt(0))) {
+                SCell cell = (SCell) this.sheet.get(expression);
+                if (cell == null || cell.getData().isEmpty()) {
                     throw new ErrorForm("NoCellFound");
-                }else{
-                    System.out.println("type: "+cell.getType());
-                    if(cell.getType() == Ex2Utils.ERR_CYCLE_FORM){
-                        //throw exception
-                        throw new ErrorCycle("ErrorCycle");
-                    } else if (cell.getType() == Ex2Utils.NUMBER || cell.getType() == Ex2Utils.FORM) {
-                        if(mins) {
-                            return -this.computeForm(cell.getData());
-                        }else{
-                            return this.computeForm(cell.getData());
-                        }
+                }
+
+                // First check for cycle
+                ArrayList<String> cyclePath = new ArrayList<>();
+                if (cell.detectCycle(cyclePath)) {
+                    throw new ErrorCycle("ErrorCycle");
+                }
+
+                // Check cell type and handle accordingly
+                int cellType = cell.getType();
+                if (cellType == Ex2Utils.ERR_CYCLE_FORM) {
+                    throw new ErrorCycle("ErrorCycle");
+                } else if (cellType == Ex2Utils.ERR_FORM_FORMAT) {
+                    throw new ErrorForm("ErrorForm");
+                } else if (cellType == Ex2Utils.TEXT) {
+                    throw new ErrorForm("TextCell");
+                }
+
+                // For number or form types, compute the value
+                String cellData = cell.getData();
+                if (cellData.isEmpty()) {
+                    return 0;
+                }
+
+                try {
+                    double result;
+                    if (cellType == Ex2Utils.NUMBER) {
+                        result = Double.parseDouble(cellData);
+                    } else {
+                        result = cell.computeForm(cellData);
                     }
+                    return mins ? -result : result;
+                } catch (NumberFormatException e) {
+                    throw new ErrorForm("InvalidNumber");
                 }
             }
-            //else ??
-            expression = expression.replace("(","");
-            expression = expression.replace(")","");
-            return Double.parseDouble(expression);
+
+            // Handle pure number case
+            expression = expression.replace("(", "").replace(")", "");
+            try {
+                return Double.parseDouble(expression);
+            } catch (NumberFormatException e) {
+                throw new ErrorForm("InvalidNumber");
+            }
         }
-        while (expression.contains("(")){
-            int indexOfClosed = correctClosedBracket(expression,expression.indexOf('('));
-            String subStrAfterClose = expression.substring(indexOfClosed+1);
+
+        while (expression.contains("(")) {
+            int indexOfClosed = correctClosedBracket(expression, expression.indexOf('('));
+            String subStrAfterClose = expression.substring(indexOfClosed + 1);
             expression = expression.substring(0, expression.indexOf("(")) +
-                    String.valueOf(computeForm(expression.substring(expression.indexOf("(")+1, indexOfClosed)))
+                    String.valueOf(computeForm(expression.substring(expression.indexOf("(") + 1, indexOfClosed)))
                     + subStrAfterClose;
         }
+
         int additionIndex = expression.indexOf("+");
-        if(additionIndex != -1){
-            return computeForm(expression.substring(0, additionIndex)) + computeForm(expression.substring(additionIndex +1));
+        if (additionIndex != -1) {
+            return computeForm(expression.substring(0, additionIndex)) + computeForm(expression.substring(additionIndex + 1));
         }
+
         int subIndex = expression.indexOf("-");
-        if(subIndex != -1) {
-            if(subIndex == 0 && !isOp(expression.charAt(subIndex+1))){
-                return computeForm("") - computeForm(expression.substring(subIndex +1));
-            }
-            else if (!isOp(expression.charAt(subIndex - 1))) {
+        if (subIndex != -1) {
+            if (subIndex == 0 && !isOp(expression.charAt(subIndex + 1))) {
+                return -computeForm(expression.substring(subIndex + 1));
+            } else if (!isOp(expression.charAt(subIndex - 1))) {
                 return computeForm(expression.substring(0, subIndex)) - computeForm(expression.substring(subIndex + 1));
             }
         }
-        int multiIndex = expression.indexOf("*");
-        if(multiIndex != -1){
-            return computeForm(expression.substring(0, multiIndex)) * computeForm(expression.substring(multiIndex+1));
-        }
-        int divisionIndex = expression.indexOf("/");
-        if(divisionIndex != -1){
-            return computeForm(expression.substring(0, divisionIndex)) / computeForm(expression.substring(divisionIndex+1));
-        }
-        return -1;
 
+        int multiIndex = expression.indexOf("*");
+        if (multiIndex != -1) {
+            return computeForm(expression.substring(0, multiIndex)) * computeForm(expression.substring(multiIndex + 1));
+        }
+
+        int divisionIndex = expression.indexOf("/");
+        if (divisionIndex != -1) {
+            double divisor = computeForm(expression.substring(divisionIndex + 1));
+            if (divisor == 0) {
+                throw new ErrorForm("DivisionByZero");
+            }
+            return computeForm(expression.substring(0, divisionIndex)) / divisor;
+        }
+
+        throw new ErrorForm("InvalidExpression");
     }
 
     public static boolean isOp(char c) {
@@ -330,53 +411,35 @@ public class SCell implements Cell {
             return false;
         }
     }
-    public static int isMinus(boolean isMins){
-        if(isMins){
-            return -1;
-        }
-        return 1;
-    }
 
-    public boolean hasRef(){
-        String str = this.getData();
-        for (int i = 0; i < str.length(); i++) {
-            if(isLetter(str.charAt(i))){
-                CellEntry entry = new CellEntry(str.substring(i,closestOpOrBrackets(str,i)));
-                if(entry.isValid()){
-                    return false;
-                }
-            }
-        }
-        return true;
-    }
 
     public ArrayList<SCell> getReferences(String str) {
-        str = str.replaceAll(" ","");
-        ArrayList<SCell> references = new ArrayList<SCell>();
-        str = str.toUpperCase();
+        ArrayList<SCell> references = new ArrayList<>();
+        if (str == null || str.isEmpty()) {
+            return references;
+        }
+
+        str = str.replaceAll(" ", "").toUpperCase();
+        if (str.charAt(0) == '=') {
+            str = str.substring(1);
+        }
+
         for (int i = 0; i < str.length(); i++) {
-            if(isLetter(str.charAt(i))){
-                CellEntry entry = new CellEntry(str.substring(i,closestOpOrBrackets(str,i)));
-                references.add((SCell)this.sheet.get((entry.getIndex())));
+            if (isLetter(str.charAt(i))) {
+                int endIndex = closestOpOrBrackets(str, i);
+                String cellRef = str.substring(i, endIndex);
+                CellEntry entry = new CellEntry(cellRef);
+                if (entry.isValid()) {
+                    SCell refCell = (SCell) this.sheet.get(entry.getIndex());
+                    if (refCell != null) {
+                        references.add(refCell);
+                    }
+                }
+                i = endIndex - 1;
             }
         }
         return references;
     }
-
-    public boolean containHimself() {
-        String str = this.getData();
-        str = str.toUpperCase();
-        for (int i = 0; i < str.length(); i++) {
-            if(isLetter(str.charAt(i))){
-                CellEntry en = new CellEntry(str.substring(i,closestOpOrBrackets(str,i)));
-                if(en.getIndex().equals(this.entry.getIndex())){
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
 
     public class ErrorForm extends Exception {
         public ErrorForm(String errorMessage) {

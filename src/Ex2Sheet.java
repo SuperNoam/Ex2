@@ -88,22 +88,34 @@ public class Ex2Sheet implements Sheet {
         for (int i = 0; i < width(); i++) {
             for (int j = 0; j < height(); j++) {
                 if (table[i][j] != null) {
-                    ((SCell)table[i][j]).resetVisited();
+                    SCell cell = (SCell)table[i][j];
+                    cell.resetVisited();
+                    // Also reset the cell type if it was previously marked as cycle error
+                    if (cell.getType() == Ex2Utils.ERR_CYCLE_FORM) {
+                        cell.setType(Ex2Utils.FORM);
+                    }
                 }
             }
         }
+
         int[][] dd = depth();
-        System.out.println(Arrays.deepToString(dd));
+
+        // First handle cycle errors
+        for (int i = 0; i < width(); i++) {
+            for (int j = 0; j < height(); j++) {
+                if (dd[i][j] == -1) {
+                    SCell cell = (SCell)get(i,j);
+                    cell.setType(Ex2Utils.ERR_CYCLE_FORM);
+                    cell.setValue(Ex2Utils.ERR_CYCLE);
+                }
+            }
+        }
+
+        // Then evaluate cells in order of dependency
         for (int depth = 0; depth <= getMaxDepth(dd); depth++) {
             for (int i = 0; i < width(); i++) {
-
                 for (int j = 0; j < height(); j++) {
-                    if(dd[i][j] == -1){
-                        SCell cell = (SCell)get(i,j);
-                        cell.setType(Ex2Utils.ERR_CYCLE_FORM);
-                        cell.setValue(Ex2Utils.ERR_CYCLE);
-                    }
-                    else if (dd[i][j] == depth) {
+                    if (dd[i][j] == depth) {
                         evaluateCell(i, j);
                     }
                 }
@@ -172,17 +184,30 @@ public class Ex2Sheet implements Sheet {
 
     @Override
     public int[][] depth() {
-        int[][] ans = new int[width()][height()];
+        // First reset all cells
         for (int i = 0; i < width(); i++) {
             for (int j = 0; j < height(); j++) {
-                SCell cell = (SCell)get(i, j);
-                if (cell != null) {
-                    cell.resetVisited();
-                    ans[i][j] = cell.calcOrder();
+                if (table[i][j] != null) {
+                    ((SCell)table[i][j]).resetVisited();
                 }
             }
         }
 
+        int[][] ans = new int[width()][height()];
+
+        // Calculate orders for all cells
+        for (int i = 0; i < width(); i++) {
+            for (int j = 0; j < height(); j++) {
+                SCell cell = (SCell)get(i, j);
+                if (cell != null) {
+                    // Calculate order for this cell
+                    int order = cell.calcOrder();
+                    ans[i][j] = order;
+                    // Update the cell's order
+                    cell.setOrder(order);
+                }
+            }
+        }
         return ans;
     }
 

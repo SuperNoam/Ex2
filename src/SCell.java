@@ -411,6 +411,12 @@ public class SCell implements Cell {
             return false;
         }
     }
+    public boolean isText(String str){
+        if(!this.isNumber(str) && !this.isForm(str)){
+            return true;
+        }
+        return false;
+    }
 
 
     public ArrayList<SCell> getReferences(String str) {

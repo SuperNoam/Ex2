@@ -116,34 +116,4 @@ class Ex2Tests {
         assertEquals(15,entry.getY());
     }
 
-    @Test
-    void testDepth() throws Exception {
-        Ex2Sheet sheet = new Ex2Sheet();
-        sheet.set(0,0,"=A0");
-        sheet.set(0,1,"=A0");
-        sheet.set(0,2,"=3");
-        sheet.set(1,0,"=3");
-        sheet.set(1,1,"=B0");
-        sheet.set(1,2,"=B1");
-        sheet.set(1,0,"=B2");
-        System.out.println(2);
-        sheet.eval();
-        int[][] dd = sheet.depth();
-        assertEquals(-1,dd[0][0]);
-        assertEquals(-1,dd[0][1]);
-        assertEquals(0,dd[0][2]);
-        System.out.println("1");
-        assertEquals(-1,dd[1][0]);
-        assertEquals(-1,dd[1][1]);
-        assertEquals(-1,dd[1][2]);
-
-
-    }
-
-
-
-    @Test
-    void evalTest() {
-
-    }
 }

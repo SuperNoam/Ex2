@@ -52,7 +52,12 @@ class Ex2Tests {
         mockSheet.set(0,0,"=12");
         mockSheet.set(0,1,"=A0+2");
         mockSheet.set(0,2,"=A1+A0");
-        int depth = -2;
-        assertEquals(2, depth, "Depth should correctly compute as 2 for valid dependencies.");
+        int[][] depth = mockSheet.depth();
+        assertEquals(2, depth[0][2], "Depth should correctly compute as 2 for valid dependencies.");
+    }
+
+    @Test
+    void evalTest() {
+
     }
 }

@@ -20,7 +20,7 @@ public class CellEntry  implements Index2D {
         if(this.index.length() > 3 || this.index.length() < 2) {
             return false;
         }
-        if(!isDigit(this.index.charAt(0))){
+        if(!isLetter(this.index.charAt(0))){
             return false;
         }
         try{
@@ -56,7 +56,7 @@ public class CellEntry  implements Index2D {
         return this.index;
     }
 
-    public static boolean isDigit(char c){
+    public static boolean isLetter(char c){
         String s = String.valueOf(c);
         for (String str : Ex2Utils.ABC){
             if(str.equals(s)){

@@ -1,5 +1,4 @@
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -14,7 +13,7 @@ public class Ex2Sheet implements Sheet {
             for(int j=0;j<y;j=j+1) {
                 table[i][j] = new SCell("",this);
                 table[i][j].setType(Ex2Utils.TEXT);
-                ((SCell)table[i][j]).setEntry(new CellEntry(Ex2Utils.ABC[i]+""+j));
+                ((SCell)table[i][j]).setEntry(new CellEntry(Ex2Utils.ABC[i]+j));
             }
         }
         eval();
@@ -79,18 +78,17 @@ public class Ex2Sheet implements Sheet {
     @Override
     public void set(int x, int y, String s) {
         SCell c = new SCell(s,this);
-        c.setEntry(new CellEntry(Ex2Utils.ABC[x]+""+y));
+        c.setEntry(new CellEntry(Ex2Utils.ABC[x]+y));
         table[x][y] = c;
     }
     @Override
     public void eval() {
-        // Reset all cells first
+        // Reset cells first
         for (int i = 0; i < width(); i++) {
             for (int j = 0; j < height(); j++) {
                 if (table[i][j] != null) {
                     SCell cell = (SCell)table[i][j];
                     cell.resetVisited();
-                    // Also reset the cell type if it was previously marked as cycle error
                     if (cell.getType() == Ex2Utils.ERR_CYCLE_FORM) {
                         cell.setType(Ex2Utils.FORM);
                     }
@@ -100,7 +98,6 @@ public class Ex2Sheet implements Sheet {
 
         int[][] dd = depth();
 
-        // First handle cycle errors
         for (int i = 0; i < width(); i++) {
             for (int j = 0; j < height(); j++) {
                 if (dd[i][j] == -1) {
@@ -111,7 +108,6 @@ public class Ex2Sheet implements Sheet {
             }
         }
 
-        // Then evaluate cells in order of dependency
         for (int depth = 0; depth <= getMaxDepth(dd); depth++) {
             for (int i = 0; i < width(); i++) {
                 for (int j = 0; j < height(); j++) {
@@ -184,7 +180,6 @@ public class Ex2Sheet implements Sheet {
 
     @Override
     public int[][] depth() {
-        // First reset all cells
         for (int i = 0; i < width(); i++) {
             for (int j = 0; j < height(); j++) {
                 if (table[i][j] != null) {
@@ -195,25 +190,33 @@ public class Ex2Sheet implements Sheet {
 
         int[][] ans = new int[width()][height()];
 
-        // Calculate orders for all cells
         for (int i = 0; i < width(); i++) {
             for (int j = 0; j < height(); j++) {
                 SCell cell = (SCell)get(i, j);
                 if (cell != null) {
-                    // Calculate order for this cell
+                    // calc order for this cell
                     int order = cell.calcOrder();
                     ans[i][j] = order;
-                    // Update the cell's order
+                    // Update this cell order
                     cell.setOrder(order);
                 }
             }
         }
+        System.out.println(Arrays.deepToString(ans));
         return ans;
     }
-
+    public void clearTable(){
+        for (int i = 0; i < width(); i++) {
+            for (int j = 0; j < height(); j++) {
+                set(i,j,"");
+                get(i,j).setType(Ex2Utils.TEXT);
+            }
+        }
+    }
     @Override
     public void load(String fileName) throws IOException {
         try {
+            clearTable();
             File file = new File(fileName);
             Scanner myReader = new Scanner(file);
             if(!myReader.hasNext()){
@@ -222,26 +225,21 @@ public class Ex2Sheet implements Sheet {
             String line = myReader.nextLine();
             while (myReader.hasNextLine() && line != null) {
                 line = myReader.nextLine();
-                System.out.println(line);
                 line = line.replaceAll(" ","");
                 String[] arr = line.split(",");
-                System.out.println("Arr: " + Arrays.toString(arr));
                 if (arr.length < 3) {
-                    System.out.println("got out 1");
                     continue;
                 }
                 try {
                     int x = Integer.parseInt(arr[0]);
                     int y = Integer.parseInt(arr[1]);
-                    //CellEntry entry = new CellEntry(Ex2Utils.ABC[x] + y);
                     this.set(x, y, arr[2]);
                 } catch (Exception e) {
                     System.out.println(e.getMessage());
-                    System.out.println("got out 2");
-                    continue;
                 }
 
             }
+            myReader.close();
         } catch (IOException e) {
             throw new IOException(e.getMessage());
         }

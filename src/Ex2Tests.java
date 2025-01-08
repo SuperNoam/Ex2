@@ -65,10 +65,13 @@ class Ex2Tests {
     void testValue()throws Exception{
         Ex2Sheet sheet = new Ex2Sheet();
         sheet.set(0,0,"=15+2");
+        sheet.eval();
         assertEquals("17.0",sheet.value(0,0));
         sheet.set(0,0,"=15G+2");
+        sheet.eval();
         assertEquals(Ex2Utils.ERR_FORM,sheet.value(0,0));
         sheet.set(0,0,"=18/9*3");
+        sheet.eval();
         assertEquals("6.0",sheet.value(0,0));
     }
 
@@ -84,6 +87,7 @@ class Ex2Tests {
         cell.setData("=(8+(3*(4+2)))-(7/(5-2))");
         assertEquals(23.666666666666668,cell.computeForm(cell.getData()));
     }
+
 
 
     @Test
@@ -115,5 +119,6 @@ class Ex2Tests {
         assertEquals(6,entry.getX());
         assertEquals(15,entry.getY());
     }
+
 
 }

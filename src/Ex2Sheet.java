@@ -150,7 +150,12 @@ public class Ex2Sheet implements Sheet {
                     try {
                         String result = eval(x, y);
                         cell.setValue(result);
-                        cell.setType(Ex2Utils.FORM);
+                        if(result.equals(Ex2Utils.ERR_FORM)){
+                            cell.setType(Ex2Utils.ERR_FORM_FORMAT);
+                        }
+                        else {
+                            cell.setType(Ex2Utils.FORM);
+                        }
                     } catch (Exception e) {
                         cell.setType(Ex2Utils.ERR_FORM_FORMAT);
                         cell.setValue(Ex2Utils.ERR_FORM);
